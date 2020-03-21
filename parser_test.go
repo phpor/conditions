@@ -140,7 +140,7 @@ func TestValid(t *testing.T) {
 			break
 		}
 
-		t.Log("Evaluating with: %#v", td.args)
+		t.Logf("Evaluating with: %#v", td.args)
 		r, err = Evaluate(expr, td.args)
 		if err != nil {
 			if td.isErr {
