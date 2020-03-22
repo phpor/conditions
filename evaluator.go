@@ -100,12 +100,36 @@ func evaluateSubtree(expr Expr, args interface{}) (Expr, error) {
 		case reflect.Slice:
 			return &SliceStringLiteral{Val: val.([]string)}, nil
 		case reflect.Func:
-			return &BooleanLiteral{Val: val.(func() bool)()}, nil
+			return evalFunc(val, index)
 		}
 		return falseExpr, fmt.Errorf("Unsupported argument %s type: %s", n.Val, kind)
 	}
 
 	return expr, nil
+}
+
+// support (and only support) no argument function which return bool
+func evalFunc(val interface{}, name string) (Expr, error) {
+	fun, ok := val.(func() bool)
+	if !ok {
+		return falseExpr, fmt.Errorf("func %s only can be 'func() bool'", name)
+	}
+	if fun == nil {
+		return falseExpr, fmt.Errorf("func %s defined is nil", name)
+	}
+	var err error
+	result := func() bool {
+		defer func() {
+			if r := recover(); r != nil {
+				err = fmt.Errorf("call func $%s error (return as false): %s", name, r)
+			}
+		}()
+		return fun()
+	}()
+	if err != nil {
+		return falseExpr, err
+	}
+	return &BooleanLiteral{Val: result}, nil
 }
 
 // applyOperator is a dispatcher of the evaluation according to operator

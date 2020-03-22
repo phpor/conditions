@@ -10,11 +10,12 @@ import (
 func main() {
 	// Our condition to check
 	type people struct {
-		Name   string
-		Height int32
-		Male   bool
-		Goods  []string
-		IsTrue func() bool
+		Name    string
+		Height  int32
+		Male    bool
+		Goods   []string
+		IsTrue  func() bool // correct func
+		IsFalse func()      // incorrect func
 	}
 
 	s := ` $Name == "test" AND $Height > 100 AND $Male == false`
@@ -38,9 +39,11 @@ func main() {
 	fmt.Printf("Condition: `%v`, Val: `%v`, Result: `%v`\n", s, p1, r)
 
 	// use struct
-	var p2 = people{Name: "test", Height: 200, Male: false, Goods: []string{"A", "B"}, IsTrue: func() bool {
-		return true
-	}}
+	//var p2 = people{Name: "test", Height: 200, Male: false, Goods: []string{"A", "B"}, IsTrue: func() bool {
+	//	panic("aaa")
+	//	return true
+	//}}
+	var p2 = people{Name: "test", Height: 200, Male: false, Goods: []string{"A", "B"}, IsFalse: func() {}}
 	r, err = conditions.Evaluate(expr, p2)
 	if err != nil {
 		fmt.Println(err)
@@ -56,7 +59,8 @@ func main() {
 	}
 	fmt.Printf("Condition: `%v`, Val: `%v`, Result: `%v`\n", s, "invalid", r)
 
-	contains := ` ($Goods CONTAINS "A") AND $Name == "test" AND $IsTrue`
+	//contains := ` ($Goods CONTAINS "A") AND $Name == "test" AND $IsTrue`
+	contains := ` ($Goods CONTAINS "A") AND $Name == "test" AND $IsFalse`
 
 	// Parse the condition language and get expression
 	containsP := conditions.NewParser(strings.NewReader(contains))
