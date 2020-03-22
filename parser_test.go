@@ -86,6 +86,10 @@ var validTestData = []struct {
 	{`[foo] not in [2,3,4]`, map[string]interface{}{"foo": 4}, false, false},
 	{`[foo] not in [2,3,4]`, map[string]interface{}{"foo": 5}, true, false},
 
+	// NOT IN with array of variable slice numbers
+	{`[foo] not in [bar]`, map[string]interface{}{"foo": 4, "bar": []float64{2, 3, 4}}, false, false},
+	{`[foo] not in [bar]`, map[string]interface{}{"foo": 5, "bar": []float64{2, 3, 4}}, true, false},
+
 	// =~
 	{"[status] =~ /^5\\d\\d/", map[string]interface{}{"status": "500"}, true, false},
 	{"[status] =~ /^4\\d\\d/", map[string]interface{}{"status": "500"}, false, false},
