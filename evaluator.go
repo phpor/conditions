@@ -99,6 +99,8 @@ func evaluateSubtree(expr Expr, args interface{}) (Expr, error) {
 			return &BooleanLiteral{Val: val.(bool)}, nil
 		case reflect.Slice:
 			return &SliceStringLiteral{Val: val.([]string)}, nil
+		case reflect.Func:
+			return &BooleanLiteral{Val: val.(func() bool)()}, nil
 		}
 		return falseExpr, fmt.Errorf("Unsupported argument %s type: %s", n.Val, kind)
 	}

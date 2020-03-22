@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/yowenter/conditions"
+	"github.com/phpor/conditions"
 )
 
 func main() {
@@ -14,6 +14,7 @@ func main() {
 		Height int32
 		Male   bool
 		Goods  []string
+		IsTrue func() bool
 	}
 
 	s := ` $Name == "test" AND $Height > 100 AND $Male == false`
@@ -37,7 +38,9 @@ func main() {
 	fmt.Printf("Condition: `%v`, Val: `%v`, Result: `%v`\n", s, p1, r)
 
 	// use struct
-	var p2 = people{Name: "test", Height: 200, Male: false, Goods: []string{"A", "B"}}
+	var p2 = people{Name: "test", Height: 200, Male: false, Goods: []string{"A", "B"}, IsTrue: func() bool {
+		return true
+	}}
 	r, err = conditions.Evaluate(expr, p2)
 	if err != nil {
 		fmt.Println(err)
@@ -53,7 +56,7 @@ func main() {
 	}
 	fmt.Printf("Condition: `%v`, Val: `%v`, Result: `%v`\n", s, "invalid", r)
 
-	contains := ` ($Goods CONTAINS "A") AND $Name == "test" `
+	contains := ` ($Goods CONTAINS "A") AND $Name == "test" AND $IsTrue`
 
 	// Parse the condition language and get expression
 	containsP := conditions.NewParser(strings.NewReader(contains))
