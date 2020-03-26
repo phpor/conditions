@@ -74,3 +74,4 @@ Here is a diagram for a sample FBP flow (created using [FlowMaker](https://githu
 
 ##todo
 1. 目前字符串只支持==操作； 完善字符串的 < > <=  >= 操作
+1. 发现算符优先级bug，目前通过()来解决

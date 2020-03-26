@@ -12,7 +12,7 @@ func main() {
 }
 
 func priority() {
-	s := `$foo1 > $bar1 and $foo2 > $bar2 and $foo3 > $bar3`
+	s := `$foo1 > $bar1 and ($foo2 > $bar2) and ($foo3 > $bar3)`
 
 	// Parse the condition language and get expression
 	p := conditions.NewParser(strings.NewReader(s))

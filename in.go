@@ -13,56 +13,7 @@ func applyNOTIN(l, r Expr) (*BooleanLiteral, error) {
 
 // applyContains applies CONTAINS to l/r operations
 func applyContains(l, r Expr) (*BooleanLiteral, error) {
-	var (
-		err error
-		in  bool
-	)
-	switch t := r.(type) {
-	case *StringLiteral:
-		var a string
-		var b []string
-		a, err = getString(r)
-		if err != nil {
-			return nil, err
-		}
-
-		b, err = getSliceString(l)
-
-		if err != nil {
-			return nil, err
-		}
-
-		in = false
-		for _, e := range b {
-			if a == e {
-				in = true
-			}
-		}
-	case *NumberLiteral:
-		var a float64
-		var b []float64
-		a, err = getNumber(r)
-		if err != nil {
-			return nil, err
-		}
-
-		b, err = getSliceNumber(l)
-
-		if err != nil {
-			return nil, err
-		}
-
-		in = false
-		for _, e := range b {
-			if a == e {
-				in = true
-			}
-		}
-	default:
-		return nil, fmt.Errorf("Can not evaluate Literal of unknow type %s %T", t, t)
-	}
-
-	return &BooleanLiteral{Val: in}, nil
+	return applyIN(r, l)
 }
 
 // applyIN applies IN operation to l/r operands
