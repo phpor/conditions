@@ -1,6 +1,7 @@
 package conditions
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 
@@ -97,6 +98,17 @@ var validTestData = []struct {
 	// !~
 	{"[status] !~ /^5\\d\\d/", map[string]interface{}{"status": "500"}, false, false},
 	{"[status] !~ /^4\\d\\d/", map[string]interface{}{"status": "500"}, true, false},
+
+	{`foo > bar and foo > bar and foo > bar`, map[string]interface{}{"foo": "222", "bar": "111"}, true, false},
+}
+
+var validTestData2 = []struct {
+	cond   string
+	args   map[string]interface{}
+	result bool
+	isErr  bool
+}{
+	{`$foo1 > $bar1 and ($foo2 > $bar2 and $foo3) > $bar3`, map[string]interface{}{"foo": "222", "bar": "111"}, true, false},
 }
 
 func TestInvalid(t *testing.T) {
@@ -131,7 +143,7 @@ func TestValid(t *testing.T) {
 		r    bool
 	)
 
-	for _, td := range validTestData {
+	for _, td := range validTestData2 {
 		t.Log("--------")
 		t.Logf("Parsing: %s", td.cond)
 
@@ -152,6 +164,10 @@ func TestValid(t *testing.T) {
 			}
 			t.Errorf("Unexpected error evaluating: %s", expr)
 			t.Error(err.Error())
+			break
+		}
+		if td.isErr {
+			t.Error("Expect fail but not")
 			break
 		}
 		if r != td.result {
@@ -212,4 +228,47 @@ func TestExpressionsVariableNames(t *testing.T) {
 	assert.Contains(t, args, "var9", "...")
 	assert.NotContains(t, args, "foo", "...")
 	assert.NotContains(t, args, "@foo", "...")
+}
+
+//字符串比较本身是比较耗费时间的；下面的测试中，包含所有比较，则26ns/op； 如果只有 i < j的比较7ns/op
+//也就是说短路求值效率会高不少
+func BenchmarkStringCompare(b *testing.B) {
+	expFunc := func() func() bool {
+		i, j, k, l, m, n := "string1", "string2", "string3", "string4", "string5", "string6"
+		return func() bool {
+			return i < j && j < k && k < l && l < m && m < n
+		}
+	}()
+	for n := 0; n < b.N; n++ {
+		expFunc()
+	}
+}
+
+//字符串比较本身是比较耗费时间的；下面的测试中，包含所有比较，如果第一个条件触发短路，则161ns/op；
+//如果条件表达式不支持短路操作的话，需要耗时 2200ns/op; 所以，短路求值支持还是非常必要的
+func BenchmarkCondition(b *testing.B) {
+	expFunc := func() func() bool {
+		cond := "($i < $j) and (\"$j\" < \"$k\") " //and $k < $l and $l < $m and $m < $n"
+		p := NewParser(strings.NewReader(cond))
+		expr, err := p.Parse()
+		if err != nil {
+			fmt.Printf("%v\n", err)
+			return nil
+		}
+		i, j, k, l, m, n := "string1", "string2", "string3", "string4", "string5", "string6"
+		data := map[string]interface{}{"i": i, "j": j, "k": k, "l": l, "m": m, "n": n}
+		return func() bool {
+			ok, err := Evaluate(expr, data)
+			if err != nil {
+				fmt.Printf("%v\n", err)
+			}
+			return ok
+		}
+	}()
+	if expFunc == nil {
+		return
+	}
+	for n := 0; n < 1; n++ {
+		expFunc()
+	}
 }

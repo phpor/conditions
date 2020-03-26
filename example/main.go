@@ -8,6 +8,34 @@ import (
 )
 
 func main() {
+	priority()
+}
+
+func priority() {
+	s := `$foo1 > $bar1 and $foo2 > $bar2 and $foo3 > $bar3`
+
+	// Parse the condition language and get expression
+	p := conditions.NewParser(strings.NewReader(s))
+	expr, err := p.Parse()
+	if err != nil {
+		fmt.Println(err)
+		return
+		// ...
+	}
+	fmt.Printf("\nExpr: %v\n", expr)
+
+	// Evaluate expression passing data for $vars
+	p1 := map[string]interface{}{"foo1": "test", "foo2": "test", "foo3": "test", "bar1": "test", "bar2": "test", "bar3": "test"}
+	r, err := conditions.Evaluate(expr, p1)
+	if err != nil {
+		fmt.Println("%v\n", err)
+		// ...
+	}
+	fmt.Printf("\nCondition: `%v`, Val: `%v`, Result: `%v`\n", s, p1, r)
+
+}
+
+func basic() {
 	// Our condition to check
 	type people struct {
 		Name    string

@@ -182,7 +182,7 @@ type BinaryExpr struct {
 
 // String returns a string representation of the binary expression.
 func (e *BinaryExpr) String() string {
-	return fmt.Sprintf("%s %s %s", e.LHS.String(), e.Op, e.RHS.String())
+	return fmt.Sprintf("(%s %s %s)", e.LHS.String(), e.Op, e.RHS.String())
 }
 
 func (e *BinaryExpr) Args() []string {

@@ -71,3 +71,6 @@ func main() {
 Here is a diagram for a sample FBP flow (created using [FlowMaker](https://github.com/cascades-fbp/flowmaker)). You can see how we configure the ContextA process with a condition via IIP packet.
 
 ![](https://raw.githubusercontent.com/yowenter/conditions/master/Example.png)
+
+##todo
+1. 目前字符串只支持==操作； 完善字符串的 < > <=  >= 操作
