@@ -7,6 +7,7 @@ import (
 
 var (
 	falseExpr = &BooleanLiteral{Val: false}
+	nilExpr   = &NilLiteral{Val: false}
 )
 
 // Evaluate takes an expr and evaluates it using given args
@@ -46,7 +47,10 @@ func evaluateSubtree(expr Expr, args interface{}) (Expr, error) {
 			return falseExpr, err
 		}
 		if n.Op == AND {
-			b, _ := getBoolean(lv) // 这里不可能错，因为上面已经正确求值了
+			// todo: 这里的lv里面是什么类型并不确定，对于非bool类型，要么强制转成bool类型来求值，要么报类型错误
+			// 1. 或者添加一个Bool()接口，如果实现了该接口，则通过该接口获取bool值，如果没有实现该接口，则报类型错误
+			// 2. 或者在getBool()中添加对相关数据类型的支持
+			b, _ := getBoolean(lv)
 			if !b {
 				return &BooleanLiteral{Val: false}, nil
 			}
@@ -57,32 +61,43 @@ func evaluateSubtree(expr Expr, args interface{}) (Expr, error) {
 		}
 		return applyOperator(n.Op, lv, rv)
 	case *VarRef:
-		index := n.Val
-		argsKind := reflect.TypeOf(args).Kind()
+		name := n.Val
+		typ := reflect.TypeOf(args)
+		if typ == nil { // 这里 nil 可以报错，毕竟总是需要上下文数据的
+			return falseExpr, fmt.Errorf("Args: `%v` is not map or struct", args)
+		}
+		argsKind := typ.Kind()
 		var val interface{}
 
+		// todo: 下面对于值找不到或者为nil的情况，需要慎重处理，否则会带来很多的混乱,是否可以有一个nil Literal，允许参与到多数类型的比较和运算
+		// 下面的逻辑和上面的逻辑结合来看，如果报错就不会继续进行后续的求值； 如果希望当做nil来求值，则不应该返回错误；
+		// 至于nil能否和其他表达式来求值，应该是对nil的细节处理来决定的
 		switch argsKind {
 		case reflect.Map:
 			argsMap, ok := args.(map[string]interface{})
 			if !ok {
-				return falseExpr, fmt.Errorf("Args: `%v` convert to map not ok", args)
+				return falseExpr, fmt.Errorf("Args: `%v` convert to map[string] fail", args)
 			}
-			if _, ok := argsMap[index]; !ok {
-				return falseExpr, fmt.Errorf("Argument: `%v` not found", index)
+			if _, ok := argsMap[name]; !ok {
+				return nilExpr, nil
 			}
-			val, _ = argsMap[index]
+			val, _ = argsMap[name]
 		case reflect.Struct:
 			ps := reflect.ValueOf(args)
-			fval := ps.FieldByName(index)
+			fval := ps.FieldByName(name) //todo: 这里有可能panic，需要注意
 			if !fval.IsValid() {
-				return falseExpr, fmt.Errorf("Argument: `%v` not found in args `%v`", index, args)
+				return falseExpr, fmt.Errorf("Argument: `%v` not found in args `%v`", name, args)
 			}
 			val = fval.Interface()
 		default:
 			return falseExpr, fmt.Errorf("Args: `%v` is not map or struct", args)
 		}
 
-		kind := reflect.TypeOf(val).Kind()
+		typ = reflect.TypeOf(val)
+		if typ == nil { // 这里对于找不到的数据如何处理非常关键
+			return nilExpr, nil
+		}
+		kind := typ.Kind()
 		switch kind {
 		case reflect.Int:
 			return &NumberLiteral{Val: float64(val.(int))}, nil
@@ -107,36 +122,12 @@ func evaluateSubtree(expr Expr, args interface{}) (Expr, error) {
 			}
 			return falseExpr, fmt.Errorf("unsupported argument %s type: %s", n.Val, kind)
 		case reflect.Func:
-			return evalFunc(val, index)
+			return evalFunc(val, name)
 		}
 		return falseExpr, fmt.Errorf("unsupported argument %s type: %s", n.Val, kind)
 	}
 
 	return expr, nil
-}
-
-// support (and only support) no argument function which return bool
-func evalFunc(val interface{}, name string) (Expr, error) {
-	fun, ok := val.(func() bool)
-	if !ok {
-		return falseExpr, fmt.Errorf("func %s only can be 'func() bool'", name)
-	}
-	if fun == nil {
-		return falseExpr, fmt.Errorf("func %s defined is nil", name)
-	}
-	var err error
-	result := func() bool {
-		defer func() {
-			if r := recover(); r != nil {
-				err = fmt.Errorf("call func $%s error (return as false): %s", name, r)
-			}
-		}()
-		return fun()
-	}()
-	if err != nil {
-		return falseExpr, err
-	}
-	return &BooleanLiteral{Val: result}, nil
 }
 
 // applyOperator is a dispatcher of the evaluation according to operator

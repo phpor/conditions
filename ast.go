@@ -45,6 +45,7 @@ type Node interface {
 }
 
 func (_ *VarRef) node()             {}
+func (_ *NilLiteral) node()         {}
 func (_ *NumberLiteral) node()      {}
 func (_ *StringLiteral) node()      {}
 func (_ *BooleanLiteral) node()     {}
@@ -63,6 +64,7 @@ type Expr interface {
 }
 
 func (_ *VarRef) expr()             {}
+func (_ *NilLiteral) expr()         {}
 func (_ *NumberLiteral) expr()      {}
 func (_ *StringLiteral) expr()      {}
 func (_ *BooleanLiteral) expr()     {}
@@ -83,6 +85,21 @@ func (r *VarRef) String() string { return QuoteIdent(r.Val) }
 
 func (r *VarRef) Args() []string {
 	return []string{r.Val}
+}
+
+// NilLiteral represents a nil literal.
+type NilLiteral struct {
+	Val bool
+}
+
+// String returns a string representation of the literal.
+func (l *NilLiteral) String() string {
+	return "<nil>"
+}
+
+func (l *NilLiteral) Args() []string {
+	args := []string{}
+	return args
 }
 
 // NumberLiteral represents a numeric literal.

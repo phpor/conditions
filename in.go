@@ -64,6 +64,8 @@ func applyIN(l, r Expr) (*BooleanLiteral, error) {
 				found = true
 			}
 		}
+	case *NilLiteral:
+		found = false
 	default:
 		return nil, fmt.Errorf("Can not evaluate Literal of unknow type %s %T", t, t)
 	}

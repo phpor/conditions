@@ -75,3 +75,8 @@ Here is a diagram for a sample FBP flow (created using [FlowMaker](https://githu
 ##todo
 1. 目前字符串只支持==操作； 完善字符串的 < > <=  >= 操作
 1. 发现算符优先级bug，目前通过()来解决
+1. evaluateSubtree 时，对于值找不到或者为nil的情况，需要慎重处理，否则会带来很多的混乱,是否可以有一个nil Literal，允许参与到多数类型的比较和运算
+    1. nil 的参与计算稍微复杂一些，因为nil可能是左值，也可能是右值； 原来是根据左值约束右值的，有了nil之后，nil为左值时，就需要参考右值的值。
+        每个apply* 函数里面需要处理
+    1. 无限循环的bug
+
