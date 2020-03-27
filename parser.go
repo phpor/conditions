@@ -218,6 +218,7 @@ func (p *Parser) unscan() {
 func (p *Parser) parseExpr() (Expr, error) {
 	// Parse a non-binary expression type to start.
 	// This variable will always be the root of the expression tree.
+	var left Expr
 	expr, err := p.parseUnaryExpr()
 	if err != nil {
 		return nil, err
@@ -231,27 +232,49 @@ func (p *Parser) parseExpr() (Expr, error) {
 			return nil, fmt.Errorf("ILLEGAL %s", tx)
 		}
 		if !op.isOperator() {
+			if op != EOF && op != RPAREN {
+				return nil, fmt.Errorf("ILLEGAL %s", tx)
+			}
 			p.unscan()
 			return expr, nil
-
 		}
 
 		// Otherwise parse the next unary expression.
-		rhs, err := p.parseUnaryExpr()
+		rhs, err := p.parseExpr()
 		if err != nil {
 			return nil, err
 		}
-
+		left = expr
 		// Assign the new root based on the precendence of the LHS and RHS operators.
-		if lhs, ok := expr.(*BinaryExpr); ok && lhs.Op.Precedence() <= op.Precedence() {
-			expr = &BinaryExpr{
-				LHS: lhs.LHS,
-				RHS: &BinaryExpr{LHS: lhs.RHS, RHS: rhs, Op: op},
-				Op:  lhs.Op,
+		if right, ok := rhs.(*BinaryExpr); ok {
+			if op.Precedence() > right.Op.Precedence() { // 注意： 这里不能 >= ,因为实际的处理顺序实际上是从右向左处理的
+				expr = &BinaryExpr{
+					LHS: &BinaryExpr{LHS: left, RHS: right.LHS, Op: op},
+					RHS: right.RHS,
+					Op:  right.Op,
+				}
+			} else {
+				expr = &BinaryExpr{
+					LHS: left,
+					RHS: rhs,
+					Op:  op,
+				}
 			}
 		} else {
 			expr = &BinaryExpr{LHS: expr, RHS: rhs, Op: op}
 		}
+		fmt.Printf("%v\n", expr)
+		//
+		//// Assign the new root based on the precendence of the LHS and RHS operators.
+		//if lhs, ok := expr.(*BinaryExpr); ok && lhs.Op.Precedence() <= op.Precedence() {
+		//	expr = &BinaryExpr{
+		//		LHS: lhs.LHS,
+		//		RHS: &BinaryExpr{LHS: lhs.RHS, RHS: rhs, Op: op},
+		//		Op:  lhs.Op,
+		//	}
+		//} else {
+		//	expr = &BinaryExpr{LHS: expr, RHS: rhs, Op: op}
+		//}
 	}
 
 }
