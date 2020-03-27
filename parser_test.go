@@ -164,8 +164,20 @@ var validTestData = []struct {
 	//{`[nil] == 0`, map[string]interface{}{}, true, false},
 
 	// nil 不属于任何集合
-	{`[nil] in [1,2]`, map[string]interface{}{}, true, false},
+	{`[nil] in [1,2]`, map[string]interface{}{}, false, false},
+
 	//{`[nil] in []`, map[string]interface{}{}, true, false},
+	// 允许不小心把字符串和数字写入一个silce，但是slice的类型取决于第一个元素的类型，后续元素强制转换成第一个元素的类型
+	{`0 in [1,"b"]`, map[string]interface{}{}, true, false}, // 这里的"b" 会被转成数字 0，所以，结果为真
+	{`1 in [1,"b"]`, map[string]interface{}{}, true, false}, // 这里的"b" 会被转成数字 0
+	{`2 in [1,"2"]`, map[string]interface{}{}, true, false}, // 这里的"2" 会被转成数字 2，所以结果为真
+	{`"b" in [1,"b"]`, map[string]interface{}{}, false, true},
+	{`"b" in ["b",1]`, map[string]interface{}{}, true, false}, // 这里的1会被转换为字符串 1
+
+	//测试不小心把 下面形式的slice当做参数的bug
+	{`"a" in ["a"]`, map[string]interface{}{}, true, false},
+	//避免表达式不完整导致死循环的bug
+	{`"a" in ["a"`, map[string]interface{}{}, false, true},
 
 	// 暂时对优先级支持是错误的，需要通过加括号搞定
 	{`([foo] > [bar]) and ([foo] > [bar]) and ([foo] > [bar])`, map[string]interface{}{"foo": "222", "bar": "111"}, true, false},
@@ -178,7 +190,7 @@ var validTestData2 = []struct {
 	isErr  bool
 }{
 	// 这里有一个bug，无限循环了，不过这个涉及parse的内容了，稍后研究
-	{`[nil] in []`, map[string]interface{}{}, true, false},
+	{`"a" in ["a"]`, map[string]interface{}{}, true, false},
 }
 
 func TestValid(t *testing.T) {
@@ -189,7 +201,7 @@ func TestValid(t *testing.T) {
 		r    bool
 	)
 
-	for _, td := range validTestData2 {
+	for _, td := range validTestData {
 		t.Log("--------")
 		t.Logf("Parsing: %s", td.cond)
 
@@ -197,6 +209,9 @@ func TestValid(t *testing.T) {
 		expr, err = p.Parse()
 		t.Logf("Expression: %s", expr)
 		if err != nil {
+			if td.isErr {
+				continue
+			}
 			t.Errorf("Unexpected error parsing expression: %s", td.cond)
 			t.Error(err.Error())
 			break

@@ -17,6 +17,7 @@ const (
 	ARRAY  // array of values (string or number) ["a","b","c"]  [342,4325,6,4]
 	TRUE   // true
 	FALSE  // false
+	NIL    // nil
 	literalEnd
 
 	operatorBegin
@@ -51,6 +52,7 @@ var tokens = [...]string{
 	ARRAY:  "ARRAY",
 	TRUE:   "TRUE",
 	FALSE:  "FALSE",
+	NIL:    "NIL",
 
 	AND: "AND",
 	OR:  "OR",
@@ -97,11 +99,4 @@ func (tok Token) Precedence() int {
 
 // isOperator returns true for operator tokens.
 func (tok Token) isOperator() bool { return tok > operatorBegin && tok < operatorEnd }
-
-// tokstr returns a literal if provided, otherwise returns the token string.
-func tokstr(tok Token, lit string) string {
-	if lit != "" {
-		return lit
-	}
-	return tok.String()
-}
+func (tok Token) isLiteral() bool  { return tok > literalBegin && tok < literalEnd }

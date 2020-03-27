@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"strings"
 
@@ -8,7 +9,18 @@ import (
 )
 
 func main() {
-	priority()
+	a := []interface{}{1}
+	x, _ := a[0].(string)
+	println(x)
+	//priority()
+	jsonDecode()
+}
+
+func jsonDecode() {
+	m := []interface{}{}
+	s := "[1, \"b\"]"
+	json.Unmarshal([]byte(s), &m)
+	fmt.Printf("%v", m)
 }
 
 func priority() {

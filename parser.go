@@ -92,18 +92,23 @@ func (p *Parser) scanWithMapping() (Token, string) {
 	case '[':
 
 		// TODO : capter les tableau de string comme ["hello", "world", "foo"] => StringLiteral
+		t, tt = p.scan()
 		var err error
-		t, tt, err = p.scanArg()
-		if err != nil {
+		if t == scanner.Ident || t == '@' {
 			p.unscan()
-			t, tt, err = p.scanArray(tt)
+			t, tt, err = p.scanArg()
+			if err == nil { // 首先尝试当做参数解析
+				tok = IDENT
+			}
+		} else { // 参数解析失败,则考虑当做数组解析
+			p.unscan()
+			t, tt, err = p.scanArray("")
 			if err == nil {
 				tok = ARRAY
-			} else {
-				tok = ILLEGAL
 			}
-		} else {
-			tok = IDENT
+		}
+		if err != nil {
+			tok = ILLEGAL
 		}
 	case '!':
 		t, tt = p.scan()
@@ -282,7 +287,9 @@ func (p *Parser) parseUnaryExpr() (Expr, error) {
 		}
 		return &NumberLiteral{Val: v}, nil
 	case TRUE, FALSE:
-		return &BooleanLiteral{Val: (tok == TRUE)}, nil
+		return &BooleanLiteral{Val: tok == TRUE}, nil
+	case NIL:
+		return &NilLiteral{Val: false}, nil
 	case ARRAY:
 		mapVal := []interface{}{}
 		err := json.Unmarshal([]byte(`[`+lit+`]`), &mapVal)
@@ -293,13 +300,23 @@ func (p *Parser) parseUnaryExpr() (Expr, error) {
 		case string:
 			values := []string{}
 			for _, v := range mapVal {
-				values = append(values, v.(string))
+				s, ok := "", false
+				if s, ok = v.(string); !ok {
+					// 非字符串类型，强制转换成字符串，但是不能直接append v.(string) ,这样可能会在非字符串时 panic
+					s = fmt.Sprintf("%v", v)
+				}
+				values = append(values, s)
 			}
 			return &SliceStringLiteral{Val: values}, err
 		case float64:
 			values := []float64{}
 			for _, v := range mapVal {
-				values = append(values, v.(float64))
+				n, ok := 0.0, false
+				if n, ok = v.(float64); !ok {
+					i, _ := strconv.ParseInt(fmt.Sprintf("%s", v), 10, 64)
+					n = float64(i)
+				}
+				values = append(values, n)
 			}
 			return &SliceNumberLiteral{Val: values}, err
 		default:
@@ -319,13 +336,15 @@ func (p *Parser) scanArray(tt string) (rune, string, error) {
 
 	for {
 		t, ttTmp = p.scan()
+
 		if t == ']' {
-			return t, tt, nil
+			break
+		}
+		if t == scanner.EOF {
+			return 0, "", fmt.Errorf("Paring error: unexpect eof")
 		}
 
 		tt = tt + sep + ttTmp
-		// pp.Print(tt)
-		// fmt.Printf("\n")
 	}
 
 	return t, tt, nil
@@ -363,7 +382,8 @@ func (p *Parser) scanArg() (rune, string, error) {
 		}
 
 		if t != ']' {
-			return t, tt, fmt.Errorf("Args error")
+			err = fmt.Errorf("Args error")
+			break
 		}
 	}
 
