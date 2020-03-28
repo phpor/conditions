@@ -2,233 +2,46 @@ package conditions
 
 import (
 	"fmt"
+	"github.com/phpor/conditions/tests"
 	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 )
 
-var invalidTestData = []string{
-	"",
-	// "[] AND true",
-	"A",
-	"[var0] == DEMO",
-	"[var0] == 'DEMO'",
-	"![var0]",
-	"[var0] <> `DEMO`",
+var validTestDataAll []tests.TestData
+
+func init() {
+	validTestDataAll = append(validTestDataAll, tests.ValidateTestDataAndOr...)
+	validTestDataAll = append(validTestDataAll, tests.ValidateTestDataCollector...)
+	validTestDataAll = append(validTestDataAll, tests.ValidateTestDataFunction...)
+	validTestDataAll = append(validTestDataAll, tests.ValidateTestDataGtLt...)
+	validTestDataAll = append(validTestDataAll, tests.ValidateTestDataNil...)
+	validTestDataAll = append(validTestDataAll, tests.ValidateTestDataNumeric...)
+	validTestDataAll = append(validTestDataAll, tests.ValidateTestDataPriority...)
+	validTestDataAll = append(validTestDataAll, tests.ValidateTestDataRegex...)
+	validTestDataAll = append(validTestDataAll, tests.ValidateTestDataStruct...)
+	validTestDataAll = append(validTestDataAll, tests.ValidateTestDataSyntax...)
+	validTestDataAll = append(validTestDataAll, tests.ValidateTestDataVar...)
 }
 
-func TestInvalid(t *testing.T) {
-
-	var (
-		expr Expr
-		err  error
-	)
-
-	for _, cond := range invalidTestData {
-		t.Log("--------")
-		t.Logf("Parsing: %s", cond)
-
-		p := NewParser(strings.NewReader(cond))
-		expr, err = p.Parse()
-		if err == nil {
-			t.Error("Should receive error")
-			break
+func init() {
+	validTestDataAll2 = append(validTestDataAll2, func() []tests.TestData {
+		type st struct {
+			Bar bool
 		}
-		if expr != nil {
-			t.Error("Expression should nil")
-			break
+		return []tests.TestData{
+			{"[foo][unknow] == true and [bar] == true", struct{ Foo st }{Foo: st{Bar: true}}, false, false},
+			// todo : 关于结构体的属性的嵌套的支持
+			{"[Foo][Bar] == true ", struct{ Foo st }{Foo: st{Bar: true}}, true, false},
+			{"[Foo][Bar]", struct{ Foo st }{Foo: st{Bar: true}}, true, false},
 		}
-	}
+	}()...)
 }
 
-var validTestData = []struct {
-	cond   string
-	args   interface{}
-	result bool
-	isErr  bool
-}{
-	{"true", nil, true, false},
-	{"false", nil, false, false},
-	{"false OR true OR false OR false OR true", nil, true, false},
-	{"((false OR true) AND false) OR (false OR true)", nil, true, false},
-	{"[var0]", map[string]interface{}{"var0": true}, true, false},
-	{"[var0]", map[string]interface{}{"var0": false}, false, false},
-	{"[var0] > true", nil, false, true},
-	{"[var0] > true", map[string]interface{}{"var0": 43}, false, true},
-	{"[var0] > true", map[string]interface{}{"var0": false}, false, true},
-	{"[var0] and [var1]", map[string]interface{}{"var0": true, "var1": true}, true, false},
-	{"[var0] AND [var1]", map[string]interface{}{"var0": true, "var1": false}, false, false},
-	{"[var0] AND [var1]", map[string]interface{}{"var0": false, "var1": true}, false, false},
-	{"[var0] AND [var1]", map[string]interface{}{"var0": false, "var1": false}, false, false},
-	{"[var0] AND false", map[string]interface{}{"var0": true}, false, false},
-	{"56.43", nil, false, true},
-	{"[var5]", nil, false, true},
-	{"[var0] > -100 AND [var0] < -50", map[string]interface{}{"var0": -75.4}, true, false},
-	{"[var0]", map[string]interface{}{"var0": true}, true, false},
-	{"[var0]", map[string]interface{}{"var0": false}, false, false},
-	{"\"OFF\"", nil, false, true},
-	{"\"ON\"", nil, false, true},
-	{"[var0] == \"OFF\"", map[string]interface{}{"var0": "OFF"}, true, false},
-	{"[var0] > 10 AND [var1] == \"OFF\"", map[string]interface{}{"var0": 14, "var1": "OFF"}, true, false},
-	{"([var0] > 10) AND ([var1] == \"OFF\")", map[string]interface{}{"var0": 14, "var1": "OFF"}, true, false},
-	{"([var0] > 10) AND ([var1] == \"OFF\") OR true", map[string]interface{}{"var0": 1, "var1": "ON"}, true, false},
-	{"[foo][dfs] == true and [bar] == true", map[string]interface{}{"foo.dfs": true, "bar": true}, true, false},
-	{"[foo][dfs][a] == true and [bar] == true", map[string]interface{}{"foo.dfs.a": true, "bar": true}, true, false},
-	{"[@foo][a] == true and [bar] == true", map[string]interface{}{"@foo.a": true, "bar": true}, true, false},
+var validTestDataAll2 = []tests.TestData{
 
-	//原本这里是需要报错的
-	//{"[foo][unknow] == true and [bar] == true", map[string]interface{}{"foo.dfs": true, "bar": true}, false, true},
-
-	//XOR
-	{"false XOR false", nil, false, false},
-	{"false xor true", nil, true, false},
-	{"true XOR false", nil, true, false},
-	{"true xor true", nil, false, false},
-
-	//NAND
-	{"false NAND false", nil, true, false},
-	{"false nand true", nil, true, false},
-	{"true nand false", nil, true, false},
-	{"true NAND true", nil, false, false},
-
-	// 空集合解析失败
-	{`1 in []`, map[string]interface{}{}, false, true},
-
-	// IN
-	{"[foo] in [foobar]", map[string]interface{}{"foo": "findme", "foobar": []string{"notme", "may", "findme", "lol"}}, true, false},
-
-	// NOT IN
-	{"[foo] not in [foobar]", map[string]interface{}{"foo": "dontfindme", "foobar": []string{"notme", "may", "findme", "lol"}}, true, false},
-
-	// IN with array of string
-	{`[foo] in ["bonjour", "le monde", "oui"]`, map[string]interface{}{"foo": "le monde"}, true, false},
-	{`[foo] in ["bonjour", "le monde", "oui"]`, map[string]interface{}{"foo": "world"}, false, false},
-
-	// NOT IN with array of string
-	{`[foo] not in ["bonjour", "le monde", "oui"]`, map[string]interface{}{"foo": "le monde"}, false, false},
-	{`[foo] not in ["bonjour", "le monde", "oui"]`, map[string]interface{}{"foo": "world"}, true, false},
-
-	// IN with array of numbers
-	{`[foo] in [2,3,4]`, map[string]interface{}{"foo": 4}, true, false},
-	{`[foo] in [2,3,4]`, map[string]interface{}{"foo": 5}, false, false},
-
-	// NOT IN with array of numbers
-	{`[foo] not in [2,3,4]`, map[string]interface{}{"foo": 4}, false, false},
-	{`[foo] not in [2,3,4]`, map[string]interface{}{"foo": 5}, true, false},
-
-	// NOT IN with array of variable slice numbers
-	{`[foo] not in [bar]`, map[string]interface{}{"foo": 4, "bar": []float64{2, 3, 4}}, false, false},
-	{`[foo] not in [bar]`, map[string]interface{}{"foo": 5, "bar": []float64{2, 3, 4}}, true, false},
-
-	{`[2,3,4] contains [foo] `, map[string]interface{}{"foo": 4}, true, false},
-	{`[2,3,4] contains [foo] `, map[string]interface{}{"foo": 5}, false, false},
-
-	// =~
-	{"[status] =~ /^5\\d\\d/", map[string]interface{}{"status": "500"}, true, false},
-	{"[status] =~ /^4\\d\\d/", map[string]interface{}{"status": "500"}, false, false},
-
-	// !~
-	{"[status] !~ /^5\\d\\d/", map[string]interface{}{"status": "500"}, false, false},
-	{"[status] !~ /^4\\d\\d/", map[string]interface{}{"status": "500"}, true, false},
-
-	// 返回值为字符串的函数
-	{`[funcString] == "test"`, map[string]interface{}{"funcString": func() string { return "test" }}, true, false},
-	{`"test" == [funcString]`, map[string]interface{}{"funcString": func() string { return "test" }}, true, false},
-
-	// 返回值为float64的函数
-	{`[funcFloat64] == 3`, map[string]interface{}{"funcFloat64": func() float64 { return 3 }}, true, false},
-	{`3 == [funcFloat64]`, map[string]interface{}{"funcFloat64": func() float64 { return 3 }}, true, false},
-
-	// 返回值为bool值的函数
-	{`[funcBool] == true`, map[string]interface{}{"funcBool": func() bool { return true }}, true, false},
-	{`false == [funcBool]`, map[string]interface{}{"funcBool": func() bool { return true }}, false, false},
-
-	// 返回值为[]string 的函数
-	{`"test" in [funcSliceString]`, map[string]interface{}{"funcSliceString": func() []string { return []string{"test"} }}, true, false},
-	{`[funcSliceString] contains "test"`, map[string]interface{}{"funcSliceString": func() []string { return []string{"test"} }}, true, false},
-
-	// 返回值为[]float64 的函数
-	{`5 in [funcSliceFloat64]`, map[string]interface{}{"funcSliceFloat64": func() []float64 { return []float64{5} }}, true, false},
-	// 返回值为空slice的函数
-	{`5 in [funcSliceFloat64]`, map[string]interface{}{"funcSliceFloat64": func() []float64 { return []float64{} }}, false, false},
-	// 返回值为nil的slice的函数
-	{`5 in [funcSliceFloat64]`, map[string]interface{}{"funcSliceFloat64": func() []float64 { return nil }}, false, false},
-	{`[funcSliceFloat64] contains 5`, map[string]interface{}{"funcSliceFloat64": func() []float64 { return []float64{5} }}, true, false},
-
-	// 函数为nil时的错误处理，不视为错误
-	{`[funcString] == "test"`, map[string]interface{}{"funcString": nil}, false, false},
-
-	// 接口提相关的测试
-	// 函数作为结构体的属性的测试, 注意： 函数必须是public的
-	{`5 in [FuncSliceFloat64]`, struct{ FuncSliceFloat64 func() []float64 }{FuncSliceFloat64: func() []float64 { return []float64{5} }}, true, false},
-	// 普通结构体属性的测试
-	{`"str" == [Foo]`, struct{ Foo string }{Foo: "str"}, true, false},
-
-	// 允许不小心把字符串和数字写入一个silce，但是slice的类型取决于第一个元素的类型，后续元素强制转换成第一个元素的类型
-	{`0 in [1,"b"]`, nil, true, false}, // 这里的"b" 会被转成数字 0，所以，结果为真
-	{`1 in [1,"b"]`, nil, true, false}, // 这里的"b" 会被转成数字 0
-	{`2 in [1,"2"]`, nil, true, false}, // 这里的"2" 会被转成数字 2，所以结果为真
-	{`"b" in [1,"b"]`, nil, false, true},
-	{`"b" in ["b",1]`, nil, true, false}, // 这里的1会被转换为字符串 1
-
-	//测试不小心把 下面形式的slice当做参数的bug
-	{`"a" in ["a"]`, nil, true, false},
-	//避免表达式不完整导致死循环的bug
-	{`"a" in ["a"`, nil, false, true},
-
-	// 识别错误表达式,代码初期，这个被识别为true，且没有错误的，现在修复该bug，作为解析错误处理
-	{`true "bb"`, nil, false, true},
-	{`true > >`, nil, false, true},
-
-	// 算法优先级测试
-	{`([foo] > [bar]) and ([foo] > [bar]) and ([foo] > [bar])`, map[string]interface{}{"foo": "222", "bar": "111"}, true, false},
-	{`[foo1] > [bar1] or [foo2] > [bar2] and [foo3] > [bar3]`, map[string]interface{}{"foo1": "222", "bar1": "111", "foo2": "222", "bar2": "111", "foo3": "222", "bar3": "111"}, true, false},
-	{`[foo1] > [bar1] and [foo2] > [bar2] or [foo3] > [bar3]`, map[string]interface{}{"foo1": "222", "bar1": "111", "foo2": "222", "bar2": "111", "foo3": "222", "bar3": "111"}, true, false},
-	{`[foo1] >= [bar1] and [foo2] > [bar2] or [foo3] < [bar3]`, map[string]interface{}{"foo1": "222", "bar1": "111", "foo2": "222", "bar2": "111", "foo3": "222", "bar3": "111"}, true, false},
-
-	// 关于nil值的处理
-	{"[nil] or true", nil, true, false},
-	{`[nil] == ""`, nil, true, false},
-	{`[nil] == 0`, nil, true, false},
-
-	// nil 不属于任何集合
-	{`[nil] in [1,2]`, nil, false, false},
-
-	//空集合解析会失败
-	{`[nil] in []`, nil, false, true},
-
-	// 关于nil的处理，右值的情况，nil尽量转成左值的类型来比较
-	{`true == nil`, nil, false, false},
-	{`false == nil`, nil, true, false},
-	{`"" == nil`, nil, true, false},
-	{`0 == nil`, nil, true, false},
-	{`0 > nil`, nil, false, false},
-	{`0 >= nil`, nil, true, false},
-	{`0 < nil`, nil, false, false},
-	{`0 <= nil`, nil, true, false},
-
-	// nil 作为左值时的测试，nil尽量转成右值的类型来比较
-	{`nil == 0`, nil, true, false},
-	{`nil != 0`, nil, false, false},
-	{`true == [nil]`, nil, false, false},
-
-	{`nil >= 0`, nil, true, false},
-	{`nil <= 0`, nil, true, false},
-	{`nil > 0`, nil, false, false},
-	{`nil < 0`, nil, false, false},
-}
-
-var validTestData2 = []struct {
-	cond   string
-	args   interface{}
-	result bool
-	isErr  bool
-}{
-	// 这里有一个bug，无限循环了，不过这个涉及parse的内容了，稍后研究
-	//{`([foo] > [bar]) and ([foo] > [bar]) and ([foo] > [bar])`, map[string]interface{}{"foo": "222", "bar": "111"}, true, false},
-	//{`[foo1] > [bar1] and [foo2] > [bar2] and [foo3] > [bar3]`, map[string]interface{}{"foo1": "222", "bar1": "111", "foo2": "222", "bar2": "111", "foo3": "222", "bar3": "111"}, true, false},
-	// 下面这个结合的正确
+	//{"[foo][unknow] == true and [bar] == true", map[string]interface{}{"foo.dfs": true, "bar": true}, false, false},
 
 }
 
@@ -240,39 +53,39 @@ func TestValid(t *testing.T) {
 		r    bool
 	)
 
-	for _, td := range validTestData {
+	for _, td := range validTestDataAll2 {
 		t.Log("--------")
-		t.Logf("Parsing: %s", td.cond)
+		t.Logf("Parsing: %s", td.Cond)
 
-		p := NewParser(strings.NewReader(td.cond))
+		p := NewParser(strings.NewReader(td.Cond))
 		expr, err = p.Parse()
 		t.Logf("Expression: %v", expr)
 		if err != nil {
-			if td.isErr {
+			if td.IsErr {
 				continue
 			}
-			t.Errorf("Unexpected error parsing expression: %s", td.cond)
+			t.Errorf("Unexpected error parsing expression: %s", td.Cond)
 			t.Error(err.Error())
 			break
 		}
 
-		t.Logf("Evaluating with: %#v", td.args)
-		t.Logf("Expect: {result: %v , isErr: %v}", td.result, td.isErr)
-		r, err = Evaluate(expr, td.args)
+		t.Logf("Evaluating with: %#v", td.Args)
+		t.Logf("Expect: {result: %v , isErr: %v}", td.Result, td.IsErr)
+		r, err = Evaluate(expr, td.Args)
 		if err != nil {
-			if td.isErr {
+			if td.IsErr {
 				continue
 			}
 			t.Errorf("Unexpected error evaluating: %s", expr)
 			t.Error(err.Error())
 			break
 		}
-		if td.isErr {
+		if td.IsErr {
 			t.Error("Expect fail but not")
 			break
 		}
-		if r != td.result {
-			t.Errorf("Expected %v, received: %v", td.result, r)
+		if r != td.Result {
+			t.Errorf("Expected %v, received: %v", td.Result, r)
 			break
 		}
 	}

@@ -110,6 +110,14 @@ func (p *Parser) scanWithMapping() (Token, string) {
 		if err != nil {
 			tok = ILLEGAL
 		}
+	case '{':
+		var err error
+		t, tt, err = p.scanArray("")
+		if err == nil {
+			tok = ARRAY
+		} else {
+			tok = ILLEGAL
+		}
 	case '!':
 		t, tt = p.scan()
 
@@ -379,7 +387,7 @@ func (p *Parser) scanArray(tt string) (rune, string, error) {
 	for {
 		t, ttTmp = p.scan()
 
-		if t == ']' {
+		if t == ']' || t == '}' {
 			break
 		}
 		if t == scanner.EOF {
