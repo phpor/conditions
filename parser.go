@@ -218,7 +218,6 @@ func (p *Parser) unscan() {
 func (p *Parser) parseExpr() (Expr, error) {
 	// Parse a non-binary expression type to start.
 	// This variable will always be the root of the expression tree.
-	var left Expr
 	expr, err := p.parseUnaryExpr()
 	if err != nil {
 		return nil, err
@@ -232,51 +231,69 @@ func (p *Parser) parseExpr() (Expr, error) {
 			return nil, fmt.Errorf("ILLEGAL %s", tx)
 		}
 		if !op.isOperator() {
-			if op != EOF && op != RPAREN {
+			if op != EOF && op != RPAREN { // 表达式 `[IsTrue] [IsFalse]`
 				return nil, fmt.Errorf("ILLEGAL %s", tx)
 			}
 			p.unscan()
-			return expr, nil
+			return expr, nil // 示例表达式: `[IsTrue]`  `( [a] > [b] )`
 		}
 
 		// Otherwise parse the next unary expression.
-		rhs, err := p.parseExpr()
+		rhs, err := p.parseUnaryExpr()
 		if err != nil {
 			return nil, err
 		}
-		left = expr
 		// Assign the new root based on the precendence of the LHS and RHS operators.
-		if right, ok := rhs.(*BinaryExpr); ok {
-			if op.Precedence() > right.Op.Precedence() { // 注意： 这里不能 >= ,因为实际的处理顺序实际上是从右向左处理的
-				expr = &BinaryExpr{
-					LHS: &BinaryExpr{LHS: left, RHS: right.LHS, Op: op},
-					RHS: right.RHS,
-					Op:  right.Op,
-				}
-			} else {
-				expr = &BinaryExpr{
-					LHS: left,
-					RHS: rhs,
-					Op:  op,
-				}
-			}
-		} else {
-			expr = &BinaryExpr{LHS: expr, RHS: rhs, Op: op}
+		if left, ok := expr.(*BinaryExpr); ok {
+			expr = adjustTree(left, op, rhs)
+		} else { // 只有最简单的表达式会走到这里，如： a > b
+			expr = &BinaryExpr{PARENT: nil, LHS: expr, RHS: rhs, Op: op}
 		}
-		fmt.Printf("%v\n", expr)
-		//
-		//// Assign the new root based on the precendence of the LHS and RHS operators.
-		//if lhs, ok := expr.(*BinaryExpr); ok && lhs.Op.Precedence() <= op.Precedence() {
-		//	expr = &BinaryExpr{
-		//		LHS: lhs.LHS,
-		//		RHS: &BinaryExpr{LHS: lhs.RHS, RHS: rhs, Op: op},
-		//		Op:  lhs.Op,
-		//	}
-		//} else {
-		//	expr = &BinaryExpr{LHS: expr, RHS: rhs, Op: op}
-		//}
+		//fmt.Printf("%v\n", expr)
 	}
 
+}
+
+func adjustTree(left *BinaryExpr, op Token, rhs Expr) *BinaryExpr {
+	e := left
+	ok := true
+	for { // 先走到最右子树
+		if e.RHS == nil {
+			break // 这里不可能走到
+		}
+		if _, ok := e.RHS.(*BinaryExpr); !ok {
+			break
+		}
+		e = e.RHS.(*BinaryExpr)
+	}
+	right := &BinaryExpr{
+		Op:     op,
+		RHS:    rhs,
+		PARENT: nil,
+	}
+	for { // 从最右子树往上挨个查
+		if e.PARENT == nil {
+			if op.Precedence() > e.Op.Precedence() {
+				right.LHS = e.RHS
+				right.PARENT = e
+				e.RHS = right
+				return e
+			}
+			right.LHS = e
+			e.PARENT = right
+			return right
+		}
+		if op.Precedence() > e.Op.Precedence() {
+			right.LHS = e.RHS
+			right.PARENT = e
+			e.RHS = right
+			return left
+		}
+		e, ok = e.PARENT.(*BinaryExpr)
+		if !ok {
+			return nil // 不可能走到这里
+		}
+	}
 }
 
 // parseUnaryExpr parses an non-binary expression.

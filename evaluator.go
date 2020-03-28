@@ -55,6 +55,12 @@ func evaluateSubtree(expr Expr, args interface{}) (Expr, error) {
 				return &BooleanLiteral{Val: false}, nil
 			}
 		}
+		if n.Op == OR {
+			b, _ := getBoolean(lv)
+			if b {
+				return &BooleanLiteral{Val: true}, nil
+			}
+		}
 		rv, err = evaluateSubtree(n.RHS, args)
 		if err != nil {
 			return falseExpr, err

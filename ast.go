@@ -192,9 +192,10 @@ func (l *DurationLiteral) String() string { return FormatDuration(l.Val) }
 
 // BinaryExpr represents an operation between two expressions.
 type BinaryExpr struct {
-	Op  Token
-	LHS Expr
-	RHS Expr
+	Op     Token
+	LHS    Expr
+	RHS    Expr
+	PARENT Expr
 }
 
 // String returns a string representation of the binary expression.

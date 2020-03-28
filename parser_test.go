@@ -179,8 +179,15 @@ var validTestData = []struct {
 	//避免表达式不完整导致死循环的bug
 	{`"a" in ["a"`, map[string]interface{}{}, false, true},
 
+	// 识别错误表达式,代码初期，这个被识别为true，且没有错误的，现在修复该bug，作为解析错误处理
+	{`true "bb"`, map[string]interface{}{}, false, true},
+	{`true > >`, map[string]interface{}{}, false, true},
+
 	// 暂时对优先级支持是错误的，需要通过加括号搞定
 	{`([foo] > [bar]) and ([foo] > [bar]) and ([foo] > [bar])`, map[string]interface{}{"foo": "222", "bar": "111"}, true, false},
+	{`[foo1] > [bar1] or [foo2] > [bar2] and [foo3] > [bar3]`, map[string]interface{}{"foo1": "222", "bar1": "111", "foo2": "222", "bar2": "111", "foo3": "222", "bar3": "111"}, true, false},
+	{`[foo1] > [bar1] and [foo2] > [bar2] or [foo3] > [bar3]`, map[string]interface{}{"foo1": "222", "bar1": "111", "foo2": "222", "bar2": "111", "foo3": "222", "bar3": "111"}, true, false},
+	{`[foo1] >= [bar1] and [foo2] > [bar2] or [foo3] < [bar3]`, map[string]interface{}{"foo1": "222", "bar1": "111", "foo2": "222", "bar2": "111", "foo3": "222", "bar3": "111"}, true, false},
 }
 
 var validTestData2 = []struct {
@@ -190,7 +197,9 @@ var validTestData2 = []struct {
 	isErr  bool
 }{
 	// 这里有一个bug，无限循环了，不过这个涉及parse的内容了，稍后研究
-	{`"a" in ["a"]`, map[string]interface{}{}, true, false},
+	//{`([foo] > [bar]) and ([foo] > [bar]) and ([foo] > [bar])`, map[string]interface{}{"foo": "222", "bar": "111"}, true, false},
+	{`[foo1] > [bar1] and [foo2] > [bar2] and [foo3] > [bar3]`, map[string]interface{}{"foo1": "222", "bar1": "111", "foo2": "222", "bar2": "111", "foo3": "222", "bar3": "111"}, true, false},
+	// 下面这个结合的正确
 }
 
 func TestValid(t *testing.T) {
@@ -207,7 +216,7 @@ func TestValid(t *testing.T) {
 
 		p := NewParser(strings.NewReader(td.cond))
 		expr, err = p.Parse()
-		t.Logf("Expression: %s", expr)
+		t.Logf("Expression: %v", expr)
 		if err != nil {
 			if td.isErr {
 				continue
@@ -270,7 +279,7 @@ func BenchmarkStringCompare(b *testing.B) {
 //如果条件表达式不支持短路操作的话，需要耗时 1100ns/op; 所以，短路求值支持还是非常必要的
 func BenchmarkCondition(b *testing.B) {
 	expFunc := func() func() bool {
-		cond := "($i < $j) and ($j < $k) and ($k < $l) and ($l < $m) and ($m < $n)"
+		cond := "($i < $j) or ($j < $k) and ($k < $l) and ($l < $m) and ($m < $n)"
 		p := NewParser(strings.NewReader(cond))
 		expr, err := p.Parse()
 		if err != nil {
