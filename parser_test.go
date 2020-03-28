@@ -150,6 +150,10 @@ var validTestData = []struct {
 
 	// 返回值为[]float64 的函数
 	{`5 in [funcSliceFloat64]`, map[string]interface{}{"funcSliceFloat64": func() []float64 { return []float64{5} }}, true, false},
+	// 返回值为空slice的函数
+	{`5 in [funcSliceFloat64]`, map[string]interface{}{"funcSliceFloat64": func() []float64 { return []float64{} }}, false, false},
+	// 返回值为nil的slice的函数
+	{`5 in [funcSliceFloat64]`, map[string]interface{}{"funcSliceFloat64": func() []float64 { return nil }}, false, false},
 	{`[funcSliceFloat64] contains 5`, map[string]interface{}{"funcSliceFloat64": func() []float64 { return []float64{5} }}, true, false},
 
 	// 函数为nil时的错误处理，不视为错误

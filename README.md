@@ -1,6 +1,6 @@
-# 简单规则引擎 conditions
+# 逻辑表达式求值引擎
 
-规则引擎对 Golang 的 `struct` 或者 `map` 进行布尔判断求值，返回 `true|false` 。
+一个golang版本的逻辑表达式求值，在 https://github.com/oleksandr/conditions 的基础上完善改进。
 
 
 This package offers a parser of a simple conditions specification language (reduced set of arithmetic/logical operations). The package is mainly created for Flow-Based Programming components that require configuration to perform some operations on the data received from multiple input ports. But it can be used whereever you need externally define some logical conditions on the internal variables.
@@ -15,7 +15,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/yowenter/conditions"
+	"github.com/phpor/conditions"
 )
 
 func main() {
@@ -66,20 +66,17 @@ func main() {
 
 ```
 
-## Where do we use it?
-
-Here is a diagram for a sample FBP flow (created using [FlowMaker](https://github.com/cascades-fbp/flowmaker)). You can see how we configure the ContextA process with a condition via IIP packet.
-
-![](https://raw.githubusercontent.com/yowenter/conditions/master/Example.png)
 
 ##todo
-1. 目前字符串只支持==操作； 完善字符串的 < > <=  >= 操作
-1. 发现算符优先级bug，目前通过()来解决
-1. evaluateSubtree 时，对于值找不到或者为nil的情况，需要慎重处理，否则会带来很多的混乱,是否可以有一个nil Literal，允许参与到多数类型的比较和运算
+1. 目前字符串只支持==操作； 完善字符串的 < > <=  >= 操作 ✅
+1. 发现算符优先级bug，目前通过()来解决 ✅
+1. evaluateSubtree 时，对于值找不到或者为nil的情况，需要慎重处理，否则会带来很多的混乱,是否可以有一个nil Literal，允许参与到多数类型的比较和运算 ✅
     1. nil 的参与计算稍微复杂一些，因为nil可能是左值，也可能是右值； 原来是根据左值约束右值的，有了nil之后，nil为左值时，就需要参考右值的值。
-        每个apply* 函数里面需要处理
+        每个apply* 函数里面需要处理 ✅ 已处理多数常见情况 包括 == != > < >= <= in contains
     1. 无限循环的bug
     
 1. apply*函数里面判断第一个值的类型的时候，使用的是函数getString() getBool() 等等，这些函数里面最好不要做强制类型转换，否则比较乱，这里可以考虑重构一下
 1. 返回值的处理，非bool时报错
+1. 考虑将slice使用 圆括号的语法
+1. 对于struct上下文，是否有必要将变量的首字母自动装换为大写来查找？
 
