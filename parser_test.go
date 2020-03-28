@@ -162,20 +162,20 @@ var validTestData = []struct {
 	{`"str" == [Foo]`, struct{ Foo string }{Foo: "str"}, true, false},
 
 	// 允许不小心把字符串和数字写入一个silce，但是slice的类型取决于第一个元素的类型，后续元素强制转换成第一个元素的类型
-	{`0 in [1,"b"]`, map[string]interface{}{}, true, false}, // 这里的"b" 会被转成数字 0，所以，结果为真
-	{`1 in [1,"b"]`, map[string]interface{}{}, true, false}, // 这里的"b" 会被转成数字 0
-	{`2 in [1,"2"]`, map[string]interface{}{}, true, false}, // 这里的"2" 会被转成数字 2，所以结果为真
-	{`"b" in [1,"b"]`, map[string]interface{}{}, false, true},
-	{`"b" in ["b",1]`, map[string]interface{}{}, true, false}, // 这里的1会被转换为字符串 1
+	{`0 in [1,"b"]`, nil, true, false}, // 这里的"b" 会被转成数字 0，所以，结果为真
+	{`1 in [1,"b"]`, nil, true, false}, // 这里的"b" 会被转成数字 0
+	{`2 in [1,"2"]`, nil, true, false}, // 这里的"2" 会被转成数字 2，所以结果为真
+	{`"b" in [1,"b"]`, nil, false, true},
+	{`"b" in ["b",1]`, nil, true, false}, // 这里的1会被转换为字符串 1
 
 	//测试不小心把 下面形式的slice当做参数的bug
-	{`"a" in ["a"]`, map[string]interface{}{}, true, false},
+	{`"a" in ["a"]`, nil, true, false},
 	//避免表达式不完整导致死循环的bug
-	{`"a" in ["a"`, map[string]interface{}{}, false, true},
+	{`"a" in ["a"`, nil, false, true},
 
 	// 识别错误表达式,代码初期，这个被识别为true，且没有错误的，现在修复该bug，作为解析错误处理
-	{`true "bb"`, map[string]interface{}{}, false, true},
-	{`true > >`, map[string]interface{}{}, false, true},
+	{`true "bb"`, nil, false, true},
+	{`true > >`, nil, false, true},
 
 	// 算法优先级测试
 	{`([foo] > [bar]) and ([foo] > [bar]) and ([foo] > [bar])`, map[string]interface{}{"foo": "222", "bar": "111"}, true, false},
@@ -184,26 +184,35 @@ var validTestData = []struct {
 	{`[foo1] >= [bar1] and [foo2] > [bar2] or [foo3] < [bar3]`, map[string]interface{}{"foo1": "222", "bar1": "111", "foo2": "222", "bar2": "111", "foo3": "222", "bar3": "111"}, true, false},
 
 	// 关于nil值的处理
-	{"[nil] or true", map[string]interface{}{}, true, false},
-	{`[nil] == ""`, map[string]interface{}{}, true, false},
-	{`[nil] == 0`, map[string]interface{}{}, true, false},
+	{"[nil] or true", nil, true, false},
+	{`[nil] == ""`, nil, true, false},
+	{`[nil] == 0`, nil, true, false},
 
 	// nil 不属于任何集合
-	{`[nil] in [1,2]`, map[string]interface{}{}, false, false},
+	{`[nil] in [1,2]`, nil, false, false},
 
 	//空集合解析会失败
-	{`[nil] in []`, map[string]interface{}{}, false, true},
+	{`[nil] in []`, nil, false, true},
 
-	// 关于nil的处理，右值的情况
-	{`true == nil`, map[string]interface{}{}, false, false},
-	{`false == nil`, map[string]interface{}{}, true, false},
-	{`"" == nil`, map[string]interface{}{}, true, false},
-	{`0 == nil`, map[string]interface{}{}, true, false},
+	// 关于nil的处理，右值的情况，nil尽量转成左值的类型来比较
+	{`true == nil`, nil, false, false},
+	{`false == nil`, nil, true, false},
+	{`"" == nil`, nil, true, false},
+	{`0 == nil`, nil, true, false},
+	{`0 > nil`, nil, false, false},
+	{`0 >= nil`, nil, true, false},
+	{`0 < nil`, nil, false, false},
+	{`0 <= nil`, nil, true, false},
 
-	// nil 作为左值时，只有 == != 的操作可以较好的处理，其它操作结果未定义
-	{`nil == 0`, map[string]interface{}{}, true, false},
-	{`nil != 0`, map[string]interface{}{}, false, false},
-	{`true == [nil]`, map[string]interface{}{}, false, false},
+	// nil 作为左值时的测试，nil尽量转成右值的类型来比较
+	{`nil == 0`, nil, true, false},
+	{`nil != 0`, nil, false, false},
+	{`true == [nil]`, nil, false, false},
+
+	{`nil >= 0`, nil, true, false},
+	{`nil <= 0`, nil, true, false},
+	{`nil > 0`, nil, false, false},
+	{`nil < 0`, nil, false, false},
 }
 
 var validTestData2 = []struct {
@@ -244,6 +253,7 @@ func TestValid(t *testing.T) {
 		}
 
 		t.Logf("Evaluating with: %#v", td.args)
+		t.Logf("Expect: {result: %v , isErr: %v}", td.result, td.isErr)
 		r, err = Evaluate(expr, td.args)
 		if err != nil {
 			if td.isErr {

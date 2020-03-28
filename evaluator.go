@@ -69,8 +69,8 @@ func evaluateSubtree(expr Expr, args interface{}) (Expr, error) {
 	case *VarRef:
 		name := n.Val
 		typ := reflect.TypeOf(args)
-		if typ == nil { // 这里 nil 可以报错，毕竟总是需要上下文数据的
-			return falseExpr, fmt.Errorf("Args: `%v` is not map or struct", args)
+		if typ == nil { // 这里 nil 可以报错，允许上下文数据为空，使得所有数据都为nil
+			return nilExpr, nil
 		}
 		argsKind := typ.Kind()
 		var val interface{}
@@ -91,8 +91,8 @@ func evaluateSubtree(expr Expr, args interface{}) (Expr, error) {
 		case reflect.Struct:
 			ps := reflect.ValueOf(args)
 			fval := ps.FieldByName(name) //todo: 这里有可能panic，需要注意
-			if !fval.IsValid() {
-				return falseExpr, fmt.Errorf("Argument: `%v` not found in args `%v`", name, args)
+			if !fval.IsValid() {         // 未找到对应字段，返回nil，尽量避免报错
+				return nilExpr, nil
 			}
 			val = fval.Interface()
 		default:

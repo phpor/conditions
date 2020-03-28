@@ -81,4 +81,5 @@ Here is a diagram for a sample FBP flow (created using [FlowMaker](https://githu
     1. 无限循环的bug
     
 1. apply*函数里面判断第一个值的类型的时候，使用的是函数getString() getBool() 等等，这些函数里面最好不要做强制类型转换，否则比较乱，这里可以考虑重构一下
+1. 返回值的处理，非bool时报错
 

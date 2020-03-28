@@ -29,6 +29,21 @@ func applyGtLt(l, r Expr, tok Token) (*BooleanLiteral, error) {
 		an, bn float64
 		err    error
 	)
+	// 如果第一个值是nil的话，类型取决于第二个参数
+	if _, ok := l.(*NilLiteral); ok {
+		// 交换左值和右值， 同时使用相反的操作符
+		l, r = r, l
+		switch tok {
+		case GT:
+			tok = LT
+		case LT:
+			tok = GT
+		case GTE:
+			tok = LTE
+		case LTE:
+			tok = GTE
+		}
+	}
 	as, err = getString(l)
 	if err == nil {
 		bs, err = getString(r)
