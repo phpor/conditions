@@ -10,6 +10,11 @@ func applyEQ(l, r Expr) (*BooleanLiteral, error) {
 		ab, bb bool
 		err    error
 	)
+	// 如果第一个值是nil的话，类型取决于第二个参数
+	if _, ok := l.(*NilLiteral); ok {
+		// 交换左值和右值， 因为是 == 操作，所以，交换不会出现问题
+		l, r = r, l
+	}
 	as, err = getString(l)
 	if err == nil {
 		bs, err = getString(r)
@@ -45,6 +50,11 @@ func applyNQ(l, r Expr) (*BooleanLiteral, error) {
 		ab, bb bool
 		err    error
 	)
+	// 如果第一个值是nil的话，类型取决于第二个参数
+	if _, ok := l.(*NilLiteral); ok {
+		// 交换左值和右值， 因为是 == 操作，所以，交换不会出现问题
+		l, r = r, l
+	}
 	as, err = getString(l)
 	if err == nil {
 		bs, err = getString(r)

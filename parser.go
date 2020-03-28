@@ -199,6 +199,8 @@ func (p *Parser) scanWithMapping() (Token, string) {
 			tok = TRUE
 		} else if ttU == "FALSE" {
 			tok = FALSE
+		} else if ttU == "NIL" {
+			tok = NIL
 		} else if strings.HasPrefix(ttU, "C") || strings.HasPrefix(ttU, "P") {
 			tok = IDENT
 		} else {

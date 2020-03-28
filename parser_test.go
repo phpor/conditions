@@ -92,6 +92,9 @@ var validTestData = []struct {
 	{"true nand false", nil, true, false},
 	{"true NAND true", nil, false, false},
 
+	// 空集合解析失败
+	{`1 in []`, map[string]interface{}{}, false, true},
+
 	// IN
 	{"[foo] in [foobar]", map[string]interface{}{"foo": "findme", "foobar": []string{"notme", "may", "findme", "lol"}}, true, false},
 
@@ -158,15 +161,6 @@ var validTestData = []struct {
 	// 普通结构体属性的测试
 	{`"str" == [Foo]`, struct{ Foo string }{Foo: "str"}, true, false},
 
-	// 关于nil值的处理
-	{"[nil] or true", map[string]interface{}{}, true, false},
-	{`[nil] == ""`, map[string]interface{}{}, true, false},
-	//{`[nil] == 0`, map[string]interface{}{}, true, false},
-
-	// nil 不属于任何集合
-	{`[nil] in [1,2]`, map[string]interface{}{}, false, false},
-
-	//{`[nil] in []`, map[string]interface{}{}, true, false},
 	// 允许不小心把字符串和数字写入一个silce，但是slice的类型取决于第一个元素的类型，后续元素强制转换成第一个元素的类型
 	{`0 in [1,"b"]`, map[string]interface{}{}, true, false}, // 这里的"b" 会被转成数字 0，所以，结果为真
 	{`1 in [1,"b"]`, map[string]interface{}{}, true, false}, // 这里的"b" 会被转成数字 0
@@ -183,11 +177,33 @@ var validTestData = []struct {
 	{`true "bb"`, map[string]interface{}{}, false, true},
 	{`true > >`, map[string]interface{}{}, false, true},
 
-	// 暂时对优先级支持是错误的，需要通过加括号搞定
+	// 算法优先级测试
 	{`([foo] > [bar]) and ([foo] > [bar]) and ([foo] > [bar])`, map[string]interface{}{"foo": "222", "bar": "111"}, true, false},
 	{`[foo1] > [bar1] or [foo2] > [bar2] and [foo3] > [bar3]`, map[string]interface{}{"foo1": "222", "bar1": "111", "foo2": "222", "bar2": "111", "foo3": "222", "bar3": "111"}, true, false},
 	{`[foo1] > [bar1] and [foo2] > [bar2] or [foo3] > [bar3]`, map[string]interface{}{"foo1": "222", "bar1": "111", "foo2": "222", "bar2": "111", "foo3": "222", "bar3": "111"}, true, false},
 	{`[foo1] >= [bar1] and [foo2] > [bar2] or [foo3] < [bar3]`, map[string]interface{}{"foo1": "222", "bar1": "111", "foo2": "222", "bar2": "111", "foo3": "222", "bar3": "111"}, true, false},
+
+	// 关于nil值的处理
+	{"[nil] or true", map[string]interface{}{}, true, false},
+	{`[nil] == ""`, map[string]interface{}{}, true, false},
+	{`[nil] == 0`, map[string]interface{}{}, true, false},
+
+	// nil 不属于任何集合
+	{`[nil] in [1,2]`, map[string]interface{}{}, false, false},
+
+	//空集合解析会失败
+	{`[nil] in []`, map[string]interface{}{}, false, true},
+
+	// 关于nil的处理，右值的情况
+	{`true == nil`, map[string]interface{}{}, false, false},
+	{`false == nil`, map[string]interface{}{}, true, false},
+	{`"" == nil`, map[string]interface{}{}, true, false},
+	{`0 == nil`, map[string]interface{}{}, true, false},
+
+	// nil 作为左值时，只有 == != 的操作可以较好的处理，其它操作结果未定义
+	{`nil == 0`, map[string]interface{}{}, true, false},
+	{`nil != 0`, map[string]interface{}{}, false, false},
+	{`true == [nil]`, map[string]interface{}{}, false, false},
 }
 
 var validTestData2 = []struct {
@@ -198,8 +214,9 @@ var validTestData2 = []struct {
 }{
 	// 这里有一个bug，无限循环了，不过这个涉及parse的内容了，稍后研究
 	//{`([foo] > [bar]) and ([foo] > [bar]) and ([foo] > [bar])`, map[string]interface{}{"foo": "222", "bar": "111"}, true, false},
-	{`[foo1] > [bar1] and [foo2] > [bar2] and [foo3] > [bar3]`, map[string]interface{}{"foo1": "222", "bar1": "111", "foo2": "222", "bar2": "111", "foo3": "222", "bar3": "111"}, true, false},
+	//{`[foo1] > [bar1] and [foo2] > [bar2] and [foo3] > [bar3]`, map[string]interface{}{"foo1": "222", "bar1": "111", "foo2": "222", "bar2": "111", "foo3": "222", "bar3": "111"}, true, false},
 	// 下面这个结合的正确
+
 }
 
 func TestValid(t *testing.T) {

@@ -79,4 +79,6 @@ Here is a diagram for a sample FBP flow (created using [FlowMaker](https://githu
     1. nil 的参与计算稍微复杂一些，因为nil可能是左值，也可能是右值； 原来是根据左值约束右值的，有了nil之后，nil为左值时，就需要参考右值的值。
         每个apply* 函数里面需要处理
     1. 无限循环的bug
+    
+1. apply*函数里面判断第一个值的类型的时候，使用的是函数getString() getBool() 等等，这些函数里面最好不要做强制类型转换，否则比较乱，这里可以考虑重构一下
 
