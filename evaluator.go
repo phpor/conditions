@@ -97,6 +97,17 @@ func evaluateSubtree(expr Expr, args interface{}) (Expr, error) {
 				return nilExpr, nil
 			}
 			val = fval.Interface()
+		case reflect.Ptr:
+			v := reflect.ValueOf(args)
+			v = v.Elem()
+			if v.Kind() != reflect.Struct {
+				return falseExpr, fmt.Errorf("args: `%v` is not map or struct or *struct", args)
+			}
+			fval := v.FieldByName(name) //todo: 这里有可能panic，需要注意
+			if !fval.IsValid() {         // 未找到对应字段，返回nil，尽量避免报错
+				return nilExpr, nil
+			}
+			val = fval.Interface()
 		default:
 			return falseExpr, fmt.Errorf("Args: `%v` is not map or struct", args)
 		}

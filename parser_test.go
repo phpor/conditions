@@ -31,10 +31,11 @@ func init() {
 			Bar bool
 		}
 		return []tests.TestData{
-			{"[foo][unknow] == true and [bar] == true", struct{ Foo st }{Foo: st{Bar: true}}, false, false},
-			// todo : 关于结构体的属性的嵌套的支持
-			{"[Foo][Bar] == true ", struct{ Foo st }{Foo: st{Bar: true}}, true, false},
-			{"[Foo][Bar]", struct{ Foo st }{Foo: st{Bar: true}}, true, false},
+			//{"[foo][unknow] == true and [bar] == true", struct{ Foo st }{Foo: st{Bar: true}}, false, false},
+			//// todo : 关于结构体的属性的嵌套的支持
+			//{"[Foo][Bar] == true ", struct{ Foo st }{Foo: st{Bar: true}}, true, false},
+			//{"[Foo][Bar]", struct{ Foo st }{Foo: st{Bar: true}}, true, false},
+			{"[Foo] > [Bar]", struct{ Foo int; Bar int; }{Foo: 2, Bar: 1}, true, false},
 		}
 	}()...)
 }
@@ -45,6 +46,7 @@ var validTestDataAll2 = []tests.TestData{
 
 }
 
+
 func TestValid(t *testing.T) {
 
 	var (
@@ -52,7 +54,7 @@ func TestValid(t *testing.T) {
 		err  error
 		r    bool
 	)
-	testCase := validTestDataAll
+	testCase := validTestDataAll2
 
 	for _, td := range testCase {
 		t.Log("--------")
@@ -92,6 +94,29 @@ func TestValid(t *testing.T) {
 	}
 	t.Log("--------")
 	t.Logf("Test count: %d\n", len(testCase))
+
+}
+
+func TestPtrStruct(t *testing.T) {
+
+	testData := struct{
+		Foo int
+		Bar int
+	}{Foo: 2, Bar: 1}
+
+	cond := "$Foo > $Bar"
+	p := NewParser(strings.NewReader(cond))
+	expr, err := p.Parse()
+	if err != nil {
+		t.Fatal(err)
+	}
+	ret, err := Evaluate(expr, &testData)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !ret {
+		t.Errorf("expect %v; fact %v", true, ret)
+	}
 
 }
 
