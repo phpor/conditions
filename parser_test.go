@@ -52,8 +52,9 @@ func TestValid(t *testing.T) {
 		err  error
 		r    bool
 	)
+	testCase := validTestDataAll
 
-	for _, td := range validTestDataAll2 {
+	for _, td := range testCase {
 		t.Log("--------")
 		t.Logf("Parsing: %s", td.Cond)
 
@@ -89,6 +90,9 @@ func TestValid(t *testing.T) {
 			break
 		}
 	}
+	t.Log("--------")
+	t.Logf("Test count: %d\n", len(testCase))
+
 }
 
 func TestExpressionsVariableNames(t *testing.T) {

@@ -32,4 +32,12 @@ var ValidateTestDataFunction = []TestData{
 	// 接口提相关的测试
 	// 函数作为结构体的属性的测试, 注意： 函数必须是public的
 	{`5 in [FuncSliceFloat64]`, struct{ FuncSliceFloat64 func() []float64 }{FuncSliceFloat64: func() []float64 { return []float64{5} }}, true, false},
+
+	// 函数定义为nil的测试
+
+	{"$Func", struct{ Func func() bool }{}, false, true},
+	{"$Func", struct{ Func func() string }{}, false, true},
+	{"$Func", struct{ Func func() float64 }{}, false, true},
+	{"$Func", struct{ Func func() []string }{}, false, true},
+	{"$Func", struct{ Func func() []float64 }{}, false, true},
 }

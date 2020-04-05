@@ -28,7 +28,7 @@ var ValidateTestDataSyntax = []TestData{
 	{`true > >`, nil, false, true},
 
 	{"56.43", nil, false, true},
-	{"[var5]", nil, false, true},
+	{"[var5]", nil, false, false}, // nil 视为false
 	{"[var0] > -100 AND [var0] < -50", map[string]interface{}{"var0": -75.4}, true, false},
 	{"[var0]", map[string]interface{}{"var0": true}, true, false},
 	{"[var0]", map[string]interface{}{"var0": false}, false, false},

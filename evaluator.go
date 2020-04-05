@@ -23,6 +23,8 @@ func Evaluate(expr Expr, args interface{}) (bool, error) {
 	switch n := result.(type) {
 	case *BooleanLiteral:
 		return n.Val, nil
+	case *NilLiteral:  // 将nil视为bool来计算，其它表达式计算中也已经大量的将nil视为bool值了
+		return n.Val, nil
 	}
 	return false, fmt.Errorf("Unexpected result of the root expression: %#v", result)
 }

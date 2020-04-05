@@ -4,9 +4,6 @@ import "fmt"
 
 // support (and only support) no argument function which return bool
 func evalFunc(val interface{}, name string) (Expr, error) {
-	if val == nil {
-		return falseExpr, fmt.Errorf("func %s defined is nil", name)
-	}
 
 	fun, ok := val.(func() bool)
 	if ok {
@@ -33,6 +30,9 @@ func evalFunc(val interface{}, name string) (Expr, error) {
 }
 
 func evalFuncBool(fun func() bool, name string) (Expr, error) {
+	if fun == nil {
+		return falseExpr, fmt.Errorf("func %s:(%T) defined is nil", name, fun)
+	}
 	var err error
 	result := func() bool {
 		defer func() {
@@ -49,6 +49,10 @@ func evalFuncBool(fun func() bool, name string) (Expr, error) {
 }
 
 func evalFuncFloat64(fun func() float64, name string) (Expr, error) {
+	expr := &NumberLiteral{Val: 0}
+	if fun == nil {
+		return expr, fmt.Errorf("func %s:(%T) defined is nil", name, fun)
+	}
 	var err error
 	result := func() float64 {
 		defer func() {
@@ -59,12 +63,17 @@ func evalFuncFloat64(fun func() float64, name string) (Expr, error) {
 		return fun()
 	}()
 	if err != nil {
-		return falseExpr, err
+		return expr, err
 	}
-	return &NumberLiteral{Val: result}, nil
+	expr.Val = result
+	return expr, nil
 }
 
 func evalFuncString(fun func() string, name string) (Expr, error) {
+	expr := &StringLiteral{Val: ""}
+	if fun == nil {
+		return expr, fmt.Errorf("func %s:(%T) defined is nil", name, fun)
+	}
 	var err error
 	result := func() string {
 		defer func() {
@@ -75,12 +84,17 @@ func evalFuncString(fun func() string, name string) (Expr, error) {
 		return fun()
 	}()
 	if err != nil {
-		return falseExpr, err
+		return expr, err
 	}
-	return &StringLiteral{Val: result}, nil
+	expr.Val = result
+	return expr, nil
 }
 
 func evalFuncSliceFloat64(fun func() []float64, name string) (Expr, error) {
+	expr := &SliceNumberLiteral{Val: []float64{}}
+	if fun == nil {
+		return expr, fmt.Errorf("func %s:(%T) defined is nil", name, fun)
+	}
 	var err error
 	result := func() []float64 {
 		defer func() {
@@ -93,10 +107,15 @@ func evalFuncSliceFloat64(fun func() []float64, name string) (Expr, error) {
 	if err != nil {
 		return falseExpr, err
 	}
-	return &SliceNumberLiteral{Val: result}, nil
+	expr.Val = result
+	return expr, nil
 }
 
 func evalFuncSliceString(fun func() []string, name string) (Expr, error) {
+	expr := &SliceStringLiteral{Val: []string{}}
+	if fun == nil {
+		return expr, fmt.Errorf("func %s:(%T) defined is nil", name, fun)
+	}
 	var err error
 	result := func() []string {
 		defer func() {
@@ -109,5 +128,6 @@ func evalFuncSliceString(fun func() []string, name string) (Expr, error) {
 	if err != nil {
 		return falseExpr, err
 	}
-	return &SliceStringLiteral{Val: result}, nil
+	expr.Val = result
+	return expr, nil
 }
